@@ -1,2 +1,2 @@
 # MaKoChain
-Lieferantenwechsel der Markkommunikation in der Energiewirtschaft auf Basis einer Blockchain
+Supplier Switch Blockchain PoC for Eenrgy Utilities / Lieferantenwechsel PoC der Markkommunikation in der Energiewirtschaft auf Basis einer Blockchain
