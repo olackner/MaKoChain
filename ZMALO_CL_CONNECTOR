@@ -1,0 +1,710 @@
+class ZMALO_CL_CONNECTOR definition
+  public
+  create public .
+
+public section.
+
+  constants GC_DEF_ADDRESS_DAPP type ZMALO_ETH_ADDRESS value '7b0ad0517f846cb1c9de72b2c56e3db73c15cc66' ##NO_TEXT.
+  constants GC_ETH_TRUE type ZMALO_ETH_DATA value '0000000000000000000000000000000000000000000000000000000000000001' ##NO_TEXT.
+  constants GC_RFC_DESTINATION type CHAR80 value 'IBSO_QUORUM' ##NO_TEXT.
+  class-data GC_URL_RPC type STRING value 'https://cresk-2.qaas-prod-canary.quorum.icn.engineering/iI2coTmVmFIH5Ll1f_tMrzQ20Tg8JP6DNz6EW314jTM=' ##NO_TEXT.
+
+  class-methods API_PERSONAL_UNLOCK_ACCOUNT
+    importing
+      !IV_ADDRESS type ZMALO_ETH_ADDRESS
+      !IV_PASSWORD type ZMALO_ETH_DATA
+    exporting
+      !EV_RESULT type ZMALO_ETH_DATA
+    raising
+      /IDXGC/CX_GENERAL .
+  class-methods API_ETH_CALL
+    importing
+      !IV_TO type ZMALO_ETH_ADDRESS default GC_DEF_ADDRESS_DAPP
+      !IV_DATA type ZMALO_ETH_DATA
+    exporting
+      !EV_REQUEST type STRING
+      !EV_RESULT type ZMALO_ETH_DATA
+    raising
+      /IDXGC/CX_GENERAL .
+  class-methods API_ETH_SEND_TRANSACTION
+    importing
+      !IV_FROM type ZMALO_ETH_ADDRESS
+      !IV_TO type ZMALO_ETH_ADDRESS default GC_DEF_ADDRESS_DAPP
+      !IV_DATA type ZMALO_ETH_DATA
+    exporting
+      !EV_REQUEST type ZMALO_ETH_DATA
+      !EV_RESPONSE type ZMALO_ETH_DATA
+      !EV_STATUS type ZMALO_ETH_DATA
+    raising
+      /IDXGC/CX_GENERAL .
+  class-methods _HTTP_QUORUM
+    importing
+      !IV_REQUEST type ZMALO_ETH_DATA
+    exporting
+      !EV_RESPONSE type ZMALO_ETH_DATA
+      !EV_RESULT type ZMALO_ETH_DATA
+    raising
+      /IDXGC/CX_GENERAL .
+  class-methods ALL_MALOS
+    importing
+      !IV_MALO_ID type ZMALO_MALO_ID
+    exporting
+      !ES_MALO_ASSET type ZMALO_MALO_ASSET
+    raising
+      /IDXGC/CX_GENERAL .
+  class-methods AUTHORIZE
+    importing
+      !IV_FROM type ZMALO_ETH_ADDRESS
+      !IV_NEW_VNB type ZMALO_ETH_ADDRESS
+    exporting
+      !EV_RESPONSE type ZMALO_ETH_DATA
+      !EV_RESULT type BOOLEAN
+    raising
+      /IDXGC/CX_GENERAL .
+  class-methods CHANGE_SUPPLIER
+    importing
+      !IV_FROM type ZMALO_ETH_ADDRESS
+      !IV_MALO_ID type ZMALO_MALO_ID
+      !IV_TERM_DATE type DATUM
+      !IV_CEND_DATE type DATUM
+    exporting
+      !EV_RESPONSE type ZMALO_ETH_DATA
+      !EV_RESULT type BOOLEAN
+    raising
+      /IDXGC/CX_GENERAL .
+  class-methods CREATE_MALO
+    importing
+      !IV_FROM type ZMALO_ETH_ADDRESS
+      !IV_MALO_ID type ZMALO_MALO_ID
+      !IV_VNB type ZMALO_ETH_ADDRESS
+      !IV_GV_ID type ZMALO_ETH_ADDRESS
+    exporting
+      !EV_RESPONSE type ZMALO_ETH_DATA
+      !EV_RESULT type BOOLEAN
+    raising
+      /IDXGC/CX_GENERAL .
+  class-methods INITIATE_CONTRACT_CANCEL
+    importing
+      !IV_FROM type ZMALO_ETH_ADDRESS
+      !IV_MALO_ID type ZMALO_MALO_ID
+    exporting
+      !EV_RESPONSE type ZMALO_ETH_DATA
+      !EV_RESULT type BOOLEAN
+    raising
+      /IDXGC/CX_GENERAL .
+  class-methods IS_VNB
+    importing
+      !IV_ADDRESS type ZMALO_ETH_ADDRESS
+    exporting
+      !EV_RESULT type BOOLEAN
+    raising
+      /IDXGC/CX_GENERAL .
+  class-methods REMOVE_MALO
+    importing
+      !IV_FROM type ZMALO_ETH_ADDRESS
+      !IV_MALO_ID type ZMALO_MALO_ID
+    exporting
+      !EV_RESPONSE type ZMALO_ETH_DATA
+      !EV_RESULT type BOOLEAN
+    raising
+      /IDXGC/CX_GENERAL .
+  class-methods UNLOCK_ACCOUNT
+    importing
+      !IV_ADDRESS type ZMALO_ETH_ADDRESS
+      !IV_PASSWORD type ZMALO_ETH_DATA
+    exporting
+      !EV_RESULT type BOOLEAN
+    raising
+      /IDXGC/CX_GENERAL .
+protected section.
+private section.
+ENDCLASS.
+
+
+
+CLASS ZMALO_CL_CONNECTOR IMPLEMENTATION.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Static Public Method ZMALO_CL_CONNECTOR=>ALL_MALOS
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] IV_MALO_ID                     TYPE        ZMALO_MALO_ID
+* | [<---] ES_MALO_ASSET                  TYPE        ZMALO_MALO_ASSET
+* | [!CX!] /IDXGC/CX_GENERAL
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+METHOD all_malos.
+
+  DATA: lv_malo_id    TYPE int8,
+        lv_id_hex(5)  TYPE x,
+        lv_para8(8)   TYPE c,
+        lv_para64(64) TYPE c,
+        lv_para_hex   TYPE xstring,
+        lv_timestamp  TYPE i,
+        lv_data       TYPE zmalo_eth_data,
+        lv_result     TYPE zmalo_eth_data.
+
+  lv_malo_id = iv_malo_id.
+  lv_id_hex  = lv_malo_id.
+
+  "Concatenate Method signature & import parameter
+  lv_data = 'ee951153' && '000000000000000000000000000000000000000000000000000000' && lv_id_hex.
+
+  "perform API Call
+  CALL METHOD api_eth_call
+    EXPORTING
+      iv_data   = lv_data
+    IMPORTING
+      ev_result = lv_result.
+
+  CHECK lv_result IS NOT INITIAL.
+  SHIFT lv_result LEFT BY 2 PLACES. "remove 0x prefix
+
+  "Convert Termination Date Timestamp (Unix Timestamp 1.1.1970 + passed seconds)
+  lv_para8 = lv_result+56(8).
+  TRANSLATE lv_para8 TO UPPER CASE.
+  lv_para_hex = lv_para8.
+  lv_timestamp = lv_para_hex.
+  IF lv_timestamp > 0.
+    es_malo_asset-termination_date = '19700101'.
+    es_malo_asset-termination_date = es_malo_asset-termination_date + lv_timestamp DIV 86400.
+  ENDIF.
+
+  "Convert Contract End Date Timestamp
+  lv_para8 = lv_result+120(8).
+  TRANSLATE lv_para8 TO UPPER CASE.
+  lv_para_hex = lv_para8.
+  lv_timestamp = lv_para_hex.
+  IF lv_timestamp > 0.
+    es_malo_asset-contract_end = '19700101'.
+    es_malo_asset-contract_end = es_malo_asset-contract_end + lv_timestamp DIV 86400.
+  ENDIF.
+
+  es_malo_asset-lf_id = lv_result+152(64).
+  es_malo_asset-vnb_id = lv_result+216(64).
+  es_malo_asset-gv_id = lv_result+280(64).
+
+  lv_para64 = lv_result+320(64).
+  IF lv_para64 = gc_eth_true.
+    es_malo_asset-contract_cancel_initiated = abap_true.
+  ENDIF.
+
+  es_malo_asset-real_contract_reference = lv_result+384(64).
+
+ENDMETHOD.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Static Public Method ZMALO_CL_CONNECTOR=>API_ETH_CALL
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] IV_TO                          TYPE        ZMALO_ETH_ADDRESS (default =GC_DEF_ADDRESS_DAPP)
+* | [--->] IV_DATA                        TYPE        ZMALO_ETH_DATA
+* | [<---] EV_REQUEST                     TYPE        STRING
+* | [<---] EV_RESULT                      TYPE        ZMALO_ETH_DATA
+* | [!CX!] /IDXGC/CX_GENERAL
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+METHOD api_eth_call.
+
+  "Etherium <eth_call> API call
+  ev_request = '{' &&
+                   '"jsonrpc":"2.0",' &&
+                   '"method":"eth_call",' &&
+                   '"params":[{' &&
+                   '"to":"0x' && iv_to && '",' &&
+                   '"data":"0x' && iv_data && '"' &&
+                   '},"latest"],' &&
+                   '"id" : "1"' &&
+               '}'.
+
+  "Send Request to Quorum
+  CALL METHOD zmalo_cl_connector=>_http_quorum
+    EXPORTING
+      iv_request = ev_request
+    IMPORTING
+      ev_result  = ev_result.
+
+ENDMETHOD.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Static Public Method ZMALO_CL_CONNECTOR=>API_ETH_SEND_TRANSACTION
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] IV_FROM                        TYPE        ZMALO_ETH_ADDRESS
+* | [--->] IV_TO                          TYPE        ZMALO_ETH_ADDRESS (default =GC_DEF_ADDRESS_DAPP)
+* | [--->] IV_DATA                        TYPE        ZMALO_ETH_DATA
+* | [<---] EV_REQUEST                     TYPE        ZMALO_ETH_DATA
+* | [<---] EV_RESPONSE                    TYPE        ZMALO_ETH_DATA
+* | [<---] EV_STATUS                      TYPE        ZMALO_ETH_DATA
+* | [!CX!] /IDXGC/CX_GENERAL
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+METHOD api_eth_send_transaction.
+
+  DATA: lv_result      TYPE zmalo_eth_data,
+        lv_request     TYPE string,
+        lo_json_parser TYPE REF TO /ui5/cl_json_parser.
+
+  "Etherium <eth_sendTransaction> API call
+  ev_request = '{' &&
+                   '"jsonrpc":"2.0",' &&
+                   '"method":"eth_sendTransaction",' &&
+                   '"params":[{' &&
+                   '"from":"0x' && iv_from && '",' &&
+                   '"to":"0x' && iv_to && '",' &&
+                   '"gas":"0x17035",' &&
+                   '"value":"0x0",' &&
+                   '"data":"0x' && iv_data && '"' &&
+                   '}],' &&
+                   '"id" : "1"' &&
+               '}'.
+
+  "Send Request to Quorum
+  CALL METHOD zmalo_cl_connector=>_http_quorum
+    EXPORTING
+      iv_request  = ev_request
+    IMPORTING
+      ev_response = ev_response
+      ev_result   = lv_result.
+
+* Transaction hash returned ?
+  CHECK lv_result IS NOT INITIAL.
+
+* Asyn Transaction
+  WAIT UP TO 5 SECONDS.
+
+  "Etherium <eth_getTransactionReceipt> API call
+  lv_request = '{' &&
+                   '"jsonrpc":"2.0",' &&
+                   '"method":"eth_getTransactionReceipt",' &&
+                   '"params":["' && lv_result && '"],' &&
+                   '"id" : "2"' &&
+               '}'.
+
+  "Send Request to Quorum
+  CALL METHOD zmalo_cl_connector=>_http_quorum
+    EXPORTING
+      iv_request  = lv_request
+    IMPORTING
+      ev_response = ev_response.
+
+  CHECK ev_response IS NOT INITIAL.
+
+  "Parse JSON response
+  CREATE OBJECT lo_json_parser.
+  CALL METHOD lo_json_parser->parse
+    EXPORTING
+      json = ev_response.
+
+  "Return Status
+  ev_status = lo_json_parser->value( '/result/status' ).
+
+ENDMETHOD.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Static Public Method ZMALO_CL_CONNECTOR=>API_PERSONAL_UNLOCK_ACCOUNT
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] IV_ADDRESS                     TYPE        ZMALO_ETH_ADDRESS
+* | [--->] IV_PASSWORD                    TYPE        ZMALO_ETH_DATA
+* | [<---] EV_RESULT                      TYPE        ZMALO_ETH_DATA
+* | [!CX!] /IDXGC/CX_GENERAL
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+METHOD api_personal_unlock_account.
+
+  DATA lv_request TYPE string.
+
+  "Etherium <eth_call> API call
+  lv_request = '{' &&
+                   '"jsonrpc":"2.0",' &&
+                   '"method":"personal_unlockAccount",' &&
+                   '"params":[' &&
+                   '"0x' && iv_address && '",' &&
+                   '"' && iv_password && '"' &&
+                   '],' &&
+                   '"id" : "1"' &&
+               '}'.
+
+  "Send Request to Quorum
+  CALL METHOD zmalo_cl_connector=>_http_quorum
+    EXPORTING
+      iv_request = lv_request
+    IMPORTING
+      ev_result  = ev_result.
+
+ENDMETHOD.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Static Public Method ZMALO_CL_CONNECTOR=>AUTHORIZE
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] IV_FROM                        TYPE        ZMALO_ETH_ADDRESS
+* | [--->] IV_NEW_VNB                     TYPE        ZMALO_ETH_ADDRESS
+* | [<---] EV_RESPONSE                    TYPE        ZMALO_ETH_DATA
+* | [<---] EV_RESULT                      TYPE        BOOLEAN
+* | [!CX!] /IDXGC/CX_GENERAL
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+METHOD authorize.
+
+  DATA: lv_data   TYPE zmalo_eth_data,
+        lv_status TYPE string.
+
+  "Concatenate Method signature & import parameter
+  lv_data = 'b6a5d7de' && '000000000000000000000000' && iv_new_vnb.
+
+  "perform API Call
+  CALL METHOD api_eth_send_transaction
+    EXPORTING
+      iv_from     = iv_from
+      iv_data     = lv_data
+    IMPORTING
+      ev_response = ev_response
+      ev_status   = lv_status.
+
+  CHECK lv_status IS NOT INITIAL.
+  SHIFT lv_status LEFT BY 2 PLACES. "remove 0x prefix
+
+  "evaluate result
+  IF lv_status = 1.
+    ev_result = abap_true.
+  ENDIF.
+
+ENDMETHOD.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Static Public Method ZMALO_CL_CONNECTOR=>CHANGE_SUPPLIER
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] IV_FROM                        TYPE        ZMALO_ETH_ADDRESS
+* | [--->] IV_MALO_ID                     TYPE        ZMALO_MALO_ID
+* | [--->] IV_TERM_DATE                   TYPE        DATUM
+* | [--->] IV_CEND_DATE                   TYPE        DATUM
+* | [<---] EV_RESPONSE                    TYPE        ZMALO_ETH_DATA
+* | [<---] EV_RESULT                      TYPE        BOOLEAN
+* | [!CX!] /IDXGC/CX_GENERAL
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+METHOD change_supplier.
+
+  CONSTANTS: lc_timestamp_baseline TYPE d VALUE '19700101'.
+
+  DATA: lv_data   TYPE zmalo_eth_data,
+        lv_status TYPE string.
+
+  DATA: lv_malo_id     TYPE int8,
+        lv_tdat        TYPE int8,
+        lv_cdat        TYPE int8,
+        lv_id_hex(5)   TYPE x,
+        lv_tdat_hex(4) TYPE x,
+        lv_cdat_hex(4) TYPE x.
+
+  lv_malo_id = iv_malo_id.
+  lv_id_hex  = lv_malo_id.
+
+  lv_tdat = ( iv_term_date - lc_timestamp_baseline ) * 86400.
+  lv_tdat_hex = lv_tdat.
+
+  lv_cdat = ( iv_cend_date - lc_timestamp_baseline ) * 86400.
+  lv_cdat_hex = lv_cdat.
+
+  "Concatenate Method signature & import parameter
+  lv_data = '3744d85e' && '000000000000000000000000000000000000000000000000000000' && lv_id_hex
+                       && '00000000000000000000000000000000000000000000000000000000' && lv_tdat_hex
+                       && '00000000000000000000000000000000000000000000000000000000' && lv_cdat_hex
+                       && '0000000000000000000000000000000000000000000000000000000000000000'.
+
+  "perform API Call
+  CALL METHOD api_eth_send_transaction
+    EXPORTING
+      iv_from     = iv_from
+      iv_data     = lv_data
+    IMPORTING
+      ev_response = ev_response
+      ev_status   = lv_status.
+
+  CHECK lv_status IS NOT INITIAL.
+  SHIFT lv_status LEFT BY 2 PLACES. "remove 0x prefix
+
+  "evaluate result
+  IF lv_status = 1.
+    ev_result = 'X'.
+  ELSE.
+    ev_result = '-'.
+  ENDIF.
+
+ENDMETHOD.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Static Public Method ZMALO_CL_CONNECTOR=>CREATE_MALO
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] IV_FROM                        TYPE        ZMALO_ETH_ADDRESS
+* | [--->] IV_MALO_ID                     TYPE        ZMALO_MALO_ID
+* | [--->] IV_VNB                         TYPE        ZMALO_ETH_ADDRESS
+* | [--->] IV_GV_ID                       TYPE        ZMALO_ETH_ADDRESS
+* | [<---] EV_RESPONSE                    TYPE        ZMALO_ETH_DATA
+* | [<---] EV_RESULT                      TYPE        BOOLEAN
+* | [!CX!] /IDXGC/CX_GENERAL
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+METHOD create_malo.
+
+  DATA: lv_data   TYPE zmalo_eth_data,
+        lv_status TYPE string.
+
+  DATA: lv_malo_id   TYPE int8,
+        lv_id_hex(5) TYPE x.
+
+  lv_malo_id = iv_malo_id.
+  lv_id_hex  = lv_malo_id.
+
+  "Concatenate Method signature & import parameter
+  lv_data = 'b93f19ca' && '000000000000000000000000000000000000000000000000000000' && lv_id_hex
+                       && '000000000000000000000000' && iv_vnb
+                       && '000000000000000000000000' && iv_gv_id.
+
+  "perform API Call
+  CALL METHOD api_eth_send_transaction
+    EXPORTING
+      iv_from     = iv_from
+      iv_data     = lv_data
+    IMPORTING
+      ev_response = ev_response
+      ev_status   = lv_status.
+
+  CHECK lv_status IS NOT INITIAL.
+  SHIFT lv_status LEFT BY 2 PLACES. "remove 0x prefix
+
+  "evaluate result
+  IF lv_status = 1.
+    ev_result = 'X'.
+  ELSE.
+    ev_result = '-'.
+  ENDIF.
+
+ENDMETHOD.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Static Public Method ZMALO_CL_CONNECTOR=>INITIATE_CONTRACT_CANCEL
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] IV_FROM                        TYPE        ZMALO_ETH_ADDRESS
+* | [--->] IV_MALO_ID                     TYPE        ZMALO_MALO_ID
+* | [<---] EV_RESPONSE                    TYPE        ZMALO_ETH_DATA
+* | [<---] EV_RESULT                      TYPE        BOOLEAN
+* | [!CX!] /IDXGC/CX_GENERAL
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+METHOD initiate_contract_cancel.
+
+  DATA: lv_data   TYPE zmalo_eth_data,
+        lv_status TYPE string.
+
+  DATA: lv_malo_id   TYPE int8,
+        lv_id_hex(5) TYPE x.
+
+
+  lv_malo_id = iv_malo_id.
+  lv_id_hex  = lv_malo_id.
+
+  "Concatenate Method signature & import parameter
+  lv_data = '1a139831' && '000000000000000000000000000000000000000000000000000000' && lv_id_hex.
+
+  "perform API Call
+  CALL METHOD api_eth_send_transaction
+    EXPORTING
+      iv_from     = iv_from
+      iv_data     = lv_data
+    IMPORTING
+      ev_response = ev_response
+      ev_status   = lv_status.
+
+  CHECK lv_status IS NOT INITIAL.
+  SHIFT lv_status LEFT BY 2 PLACES. "remove 0x prefix
+
+  "evaluate result
+  IF lv_status = 1.
+    ev_result = 'X'.
+  ELSE.
+    ev_result = '-'.
+  ENDIF.
+
+ENDMETHOD.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Static Public Method ZMALO_CL_CONNECTOR=>IS_VNB
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] IV_ADDRESS                     TYPE        ZMALO_ETH_ADDRESS
+* | [<---] EV_RESULT                      TYPE        BOOLEAN
+* | [!CX!] /IDXGC/CX_GENERAL
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+METHOD is_vnb.
+
+  DATA: lv_data   TYPE zmalo_eth_data,
+        lv_result TYPE zmalo_eth_data.
+
+  "Concatenate Method signature & import parameter
+  lv_data = '79cc70ea' && '000000000000000000000000' && iv_address.
+
+  "perform API Call
+  CALL METHOD api_eth_call
+    EXPORTING
+      iv_data   = lv_data
+    IMPORTING
+      ev_result = lv_result.
+
+  CHECK lv_result IS NOT INITIAL.
+  SHIFT lv_result LEFT BY 2 PLACES. "remove 0x prefix
+
+  "evaluate result
+  IF lv_result = gc_eth_true.
+    ev_result = abap_true.
+  ENDIF.
+
+ENDMETHOD.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Static Public Method ZMALO_CL_CONNECTOR=>REMOVE_MALO
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] IV_FROM                        TYPE        ZMALO_ETH_ADDRESS
+* | [--->] IV_MALO_ID                     TYPE        ZMALO_MALO_ID
+* | [<---] EV_RESPONSE                    TYPE        ZMALO_ETH_DATA
+* | [<---] EV_RESULT                      TYPE        BOOLEAN
+* | [!CX!] /IDXGC/CX_GENERAL
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+METHOD remove_malo.
+
+  DATA: lv_data   TYPE zmalo_eth_data,
+        lv_status TYPE string.
+
+  DATA: lv_malo_id   TYPE int8,
+        lv_id_hex(5) TYPE x.
+
+  lv_malo_id = iv_malo_id.
+  lv_id_hex  = lv_malo_id.
+
+  "Concatenate Method signature & import parameter
+  lv_data = '1571cc3c' && '000000000000000000000000000000000000000000000000000000' && lv_id_hex.
+
+  "perform API Call
+  CALL METHOD api_eth_send_transaction
+    EXPORTING
+      iv_from     = iv_from
+      iv_data     = lv_data
+    IMPORTING
+      ev_response = ev_response
+      ev_status   = lv_status.
+
+  CHECK lv_status IS NOT INITIAL.
+  SHIFT lv_status LEFT BY 2 PLACES. "remove 0x prefix
+
+  "evaluate result
+  IF lv_status = 1.
+    ev_result = 'X'.
+  ELSE.
+    ev_result = '-'.
+  ENDIF.
+
+ENDMETHOD.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Static Public Method ZMALO_CL_CONNECTOR=>UNLOCK_ACCOUNT
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] IV_ADDRESS                     TYPE        ZMALO_ETH_ADDRESS
+* | [--->] IV_PASSWORD                    TYPE        ZMALO_ETH_DATA
+* | [<---] EV_RESULT                      TYPE        BOOLEAN
+* | [!CX!] /IDXGC/CX_GENERAL
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+METHOD unlock_account.
+
+  DATA lv_result TYPE zmalo_eth_data.
+
+  CALL METHOD api_personal_unlock_account
+    EXPORTING
+      iv_address  = iv_address
+      iv_password = iv_password
+    IMPORTING
+      ev_result   = lv_result.
+
+  CHECK lv_result IS NOT INITIAL.
+
+  "evaluate result
+  IF lv_result = 'true'.
+    ev_result = abap_true.
+  ENDIF.
+
+ENDMETHOD.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Static Public Method ZMALO_CL_CONNECTOR=>_HTTP_QUORUM
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] IV_REQUEST                     TYPE        ZMALO_ETH_DATA
+* | [<---] EV_RESPONSE                    TYPE        ZMALO_ETH_DATA
+* | [<---] EV_RESULT                      TYPE        ZMALO_ETH_DATA
+* | [!CX!] /IDXGC/CX_GENERAL
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+METHOD _http_quorum.
+
+  DATA: lo_http_client TYPE REF TO if_http_client,
+        lo_json_parser TYPE REF TO /ui5/cl_json_parser.
+
+  "Open connection
+  CALL METHOD cl_http_client=>create_by_destination
+    EXPORTING
+      destination        = gc_rfc_destination
+    IMPORTING
+      client             = lo_http_client
+    EXCEPTIONS
+      argument_not_found = 1
+      plugin_not_active  = 2
+      internal_error     = 3
+      OTHERS             = 4.
+  IF sy-subrc <> 0.
+    /idxgc/cx_general=>raise_exception_from_msg( ).
+  ENDIF.
+
+  "Set request method
+  CALL METHOD lo_http_client->request->set_method
+    EXPORTING
+      method = lo_http_client->request->co_request_method_post.
+
+  "Set request header
+  CALL METHOD lo_http_client->request->if_http_entity~set_content_type
+    EXPORTING
+      content_type = 'application/json'.
+
+  CALL METHOD lo_http_client->request->append_cdata
+    EXPORTING
+      data = iv_request.
+
+  "Send request
+  CALL METHOD lo_http_client->send
+    EXCEPTIONS
+      http_communication_failure = 1
+      http_invalid_state         = 2.
+  IF sy-subrc <> 0.
+    /idxgc/cx_general=>raise_exception_from_msg( ).
+  ENDIF.
+
+  "Receive response
+  CALL METHOD lo_http_client->receive
+    EXCEPTIONS
+      http_communication_failure = 1
+      http_invalid_state         = 2
+      http_processing_failed     = 3.
+  IF sy-subrc <> 0.
+    /idxgc/cx_general=>raise_exception_from_msg( ).
+  ENDIF.
+
+  "Get response data
+  ev_response = lo_http_client->response->get_cdata( ).
+
+  "Parse JSON response
+  CREATE OBJECT lo_json_parser.
+  CALL METHOD lo_json_parser->parse
+    EXPORTING
+      json = ev_response.
+
+  "Return result value
+  ev_result = lo_json_parser->value( '/result' ).
+
+ENDMETHOD.
+ENDCLASS.
