@@ -1,0 +1,7 @@
+TERMINATION_DATE	Types	DATUM	DATS	8	0	Date
+CONTRACT_END	Types	DATUM	DATS	8	0	Date
+LF_ID	Types	ZMALO_ETH_ADDRESS	CHAR	40	0	Etherium Address
+VNB_ID	Types	ZMALO_ETH_ADDRESS	CHAR	40	0	Etherium Address
+GV_ID	Types	ZMALO_ETH_ADDRESS	CHAR	40	0	Etherium Address
+CONTRACT_CANCEL_INITIATED	Types	BOOLEAN	CHAR	1	0	Boolean Variable (X=true, -=false, space=unknown)
+REAL_CONTRACT_REFERENCE	Types	CHAR64	CHAR	64	0	Character field, length 64
