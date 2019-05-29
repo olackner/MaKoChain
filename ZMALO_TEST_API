@@ -1,0 +1,346 @@
+*&---------------------------------------------------------------------*
+*& Report ZMALO_TEST_API
+*&---------------------------------------------------------------------*
+*&
+*&---------------------------------------------------------------------*
+REPORT zmalo_test_api.
+
+SELECTION-SCREEN BEGIN OF BLOCK addr WITH FRAME TITLE t01.
+PARAMETERS: p_a_vnb TYPE zmalo_eth_address DEFAULT '903386426b978be5d1990a7ecbf21dbe6ceabb25',
+            p_a_spn TYPE zmalo_eth_address DEFAULT '990efdbd2048240308ac0bc6f3b4f283c60a6b9b',
+            p_a_spo TYPE zmalo_eth_address DEFAULT 'c480fdecb2bb0f418015aba9e268051983da0903',
+            p_a_gv  TYPE zmalo_eth_address DEFAULT 'fa4c956b50e96e9ce563a1fb9b97f0ffb0a02fa6'.
+SELECTION-SCREEN END OF BLOCK addr.
+
+SELECTION-SCREEN BEGIN OF BLOCK eth_call WITH FRAME TITLE t02.
+
+PARAMETERS: p_0 RADIOBUTTON GROUP opt.
+
+"unlock_account
+PARAMETERS:
+  p_addr TYPE zmalo_eth_address DEFAULT '903386426b978be5d1990a7ecbf21dbe6ceabb25',
+  p_pwd  TYPE zmalo_eth_data DEFAULT 'VNB'.
+
+SELECTION-SCREEN SKIP.
+
+"eth_call
+PARAMETERS: p_1 RADIOBUTTON GROUP opt.
+
+PARAMETERS:
+  p_to   TYPE zmalo_eth_address DEFAULT '7b0ad0517f846cb1c9de72b2c56e3db73c15cc66',
+  p_data TYPE zmalo_eth_data DEFAULT '79cc70ea000000000000000000000000903386426b978be5d1990a7ecbf21dbe6ceabb25'.
+
+SELECTION-SCREEN SKIP.
+
+"isVNB
+PARAMETERS: p_2 RADIOBUTTON GROUP opt.
+
+PARAMETERS:
+  p_vnb TYPE zmalo_eth_address DEFAULT '903386426b978be5d1990a7ecbf21dbe6ceabb25'.
+
+SELECTION-SCREEN SKIP.
+
+"allMalos
+PARAMETERS: p_3 RADIOBUTTON GROUP opt.
+
+PARAMETERS:
+  p_mal_id(11) TYPE n DEFAULT '10000000001'.
+
+SELECTION-SCREEN SKIP.
+
+"Authorize
+PARAMETERS: p_4 RADIOBUTTON GROUP opt.
+
+PARAMETERS:
+  p_a_from TYPE zmalo_eth_address DEFAULT '3ab1edc7a4902b9636eb866f538b26e7c165dd7a',
+  p_auth   TYPE zmalo_eth_address DEFAULT '903386426b978be5d1990a7ecbf21dbe6ceabb25'.
+
+SELECTION-SCREEN SKIP.
+
+"createMalo
+PARAMETERS: p_5 RADIOBUTTON GROUP opt.
+
+PARAMETERS:
+  p_c_from     TYPE zmalo_eth_address DEFAULT '903386426b978be5d1990a7ecbf21dbe6ceabb25',
+  p_c_maid(11) TYPE n DEFAULT '10000000001',
+  p_c_vnb      TYPE zmalo_eth_address DEFAULT '903386426b978be5d1990a7ecbf21dbe6ceabb25',
+  p_c_gv       TYPE zmalo_eth_address DEFAULT 'fa4c956b50e96e9ce563a1fb9b97f0ffb0a02fa6'.
+
+SELECTION-SCREEN SKIP.
+
+"removeMalo
+PARAMETERS: p_6 RADIOBUTTON GROUP opt.
+
+PARAMETERS:
+  p_r_from     TYPE zmalo_eth_address DEFAULT '903386426b978be5d1990a7ecbf21dbe6ceabb25',
+  p_r_maid(11) TYPE n DEFAULT '10000000010'.
+
+SELECTION-SCREEN SKIP.
+
+"changeSupplier
+PARAMETERS: p_7 RADIOBUTTON GROUP opt.
+
+PARAMETERS:
+  p_s_from     TYPE zmalo_eth_address DEFAULT '990efdbd2048240308ac0bc6f3b4f283c60a6b9b',
+  p_s_maid(11) TYPE n DEFAULT '10000000010',
+  p_s_tdat     TYPE d DEFAULT sy-datum,
+  p_s_cdat     TYPE d DEFAULT sy-datum.
+
+SELECTION-SCREEN SKIP.
+
+"initiateContractCancel
+PARAMETERS: p_8 RADIOBUTTON GROUP opt.
+
+PARAMETERS:
+  p_i_from     TYPE zmalo_eth_address DEFAULT '990efdbd2048240308ac0bc6f3b4f283c60a6b9b',
+  p_i_maid(11) TYPE n DEFAULT '10000000010'.
+
+SELECTION-SCREEN END OF BLOCK eth_call.
+
+INITIALIZATION.
+  t01 = 'Reference Addresses'.
+  t02 = 'API Interface'.
+
+  LOOP AT SCREEN.
+    IF screen-name(4) = 'P_A_'.
+      screen-input = '0'.
+      MODIFY SCREEN.
+    ENDIF.
+  ENDLOOP.
+
+START-OF-SELECTION.
+
+  IF p_0 = abap_true.
+    PERFORM api_unlock_account.
+  ELSEIF p_1 = abap_true.
+    PERFORM api_eth_call.
+  ELSEIF p_2 = abap_true.
+    PERFORM is_vnb.
+  ELSEIF p_3 = abap_true.
+    PERFORM all_malos.
+  ELSEIF p_4 = abap_true.
+    PERFORM authorize.
+  ELSEIF p_5 = abap_true.
+    PERFORM create_malo.
+  ELSEIF p_6 = abap_true.
+    PERFORM remove_malo.
+  ELSEIF p_7 = abap_true.
+    PERFORM change_supplier.
+  ELSEIF p_8 = abap_true.
+    PERFORM initiate_contract_cancel.
+  ENDIF.
+
+FORM api_unlock_account.
+
+  DATA lv_result TYPE boolean.
+
+  TRY.
+
+      CALL METHOD zmalo_cl_connector=>unlock_account
+        EXPORTING
+          iv_address  = p_addr
+          iv_password = p_pwd
+        IMPORTING
+          ev_result   = lv_result.
+    CATCH /idxgc/cx_general.
+      WRITE: 'Exception raised'.
+  ENDTRY.
+
+  WRITE: 'unlock_account(', p_addr, ') =', lv_result.
+
+ENDFORM.
+
+FORM api_eth_call.
+
+  DATA: lv_request TYPE string,
+        lv_result  TYPE string.
+  TRY.
+
+      CALL METHOD zmalo_cl_connector=>api_eth_call
+        EXPORTING
+          iv_to      = p_to
+          iv_data    = p_data
+        IMPORTING
+          ev_request = lv_request
+          ev_result  = lv_result.
+    CATCH /idxgc/cx_general.
+      WRITE: 'Exception raised'.
+  ENDTRY.
+
+  WRITE: lv_request.
+  SKIP.
+  WRITE: lv_result.
+
+ENDFORM.
+
+FORM is_vnb.
+
+  DATA ev_result TYPE boolean.
+
+  TRY.
+      CALL METHOD zmalo_cl_connector=>is_vnb
+        EXPORTING
+          iv_address = p_vnb
+        IMPORTING
+          ev_result  = ev_result.
+    CATCH /idxgc/cx_general.
+      WRITE: 'Exception raised'.
+  ENDTRY.
+
+  WRITE: 'is_vnb(', p_vnb, ') =', ev_result.
+
+ENDFORM.
+
+FORM all_malos.
+
+  DATA ls_malo_asset TYPE zmalo_malo_asset.
+
+  TRY.
+      CALL METHOD zmalo_cl_connector=>all_malos
+        EXPORTING
+          iv_malo_id    = p_mal_id
+        IMPORTING
+          es_malo_asset = ls_malo_asset.
+    CATCH /idxgc/cx_general.
+      WRITE: 'Exception raised'.
+  ENDTRY.
+
+  WRITE: 'all_malos(', p_mal_id, ') =',
+       / '   TERMINATION_DATE          :', ls_malo_asset-termination_date,
+       / '   CONTRACT_END              :', ls_malo_asset-contract_end,
+       / '   LF_ID                     :', ls_malo_asset-lf_id,
+       / '   VNB_ID                    :', ls_malo_asset-vnb_id,
+       / '   GV_ID                     :', ls_malo_asset-gv_id,
+       / '   CONTRACT_CANCEL_INITIATED :', ls_malo_asset-contract_cancel_initiated,
+       / '   REAL_CONTRACT_REFERENCE   :', ls_malo_asset-real_contract_reference.
+
+ENDFORM.
+
+FORM authorize.
+
+  DATA: lv_result   TYPE boolean,
+        lv_response TYPE string.
+
+  TRY.
+      CALL METHOD zmalo_cl_connector=>authorize
+        EXPORTING
+          iv_from     = p_a_from
+          iv_new_vnb  = p_auth
+        IMPORTING
+          ev_response = lv_response
+          ev_result   = lv_result.
+    CATCH /idxgc/cx_general.
+      WRITE: 'Exception raised'.
+  ENDTRY.
+
+  IF lv_result IS NOT INITIAL.
+    WRITE: 'authorize(', p_auth, ') =', lv_result.
+  ELSE.
+    WRITE: 'authorize(', p_auth, ') =', lv_response.
+  ENDIF.
+
+ENDFORM.
+
+FORM create_malo.
+
+  DATA: lv_result   TYPE boolean,
+        lv_response TYPE string.
+
+  TRY.
+      CALL METHOD zmalo_cl_connector=>create_malo
+        EXPORTING
+          iv_from     = p_c_from
+          iv_malo_id  = p_c_maid
+          iv_vnb      = p_c_vnb
+          iv_gv_id    = p_c_gv
+        IMPORTING
+          ev_response = lv_response
+          ev_result   = lv_result.
+    CATCH /idxgc/cx_general.
+      WRITE: 'Exception raised'.
+  ENDTRY.
+
+  IF lv_result IS NOT INITIAL.
+    WRITE: 'create_malo(', p_c_maid, ') =', lv_result.
+  ELSE.
+    WRITE: 'create_malo(', p_c_maid, ') =', lv_response.
+  ENDIF.
+
+ENDFORM.
+
+FORM remove_malo.
+
+  DATA: lv_result   TYPE boolean,
+        lv_response TYPE string.
+
+  TRY.
+      CALL METHOD zmalo_cl_connector=>remove_malo
+        EXPORTING
+          iv_from     = p_r_from
+          iv_malo_id  = p_r_maid
+        IMPORTING
+          ev_response = lv_response
+          ev_result   = lv_result.
+    CATCH /idxgc/cx_general.
+      WRITE: 'Exception raised'.
+  ENDTRY.
+
+  IF lv_result IS NOT INITIAL.
+    WRITE: 'remove_malo(', p_r_maid, ') =', lv_result.
+  ELSE.
+    WRITE: 'remove_malo(', p_r_maid, ') =', lv_response.
+  ENDIF.
+
+ENDFORM.
+
+FORM change_supplier.
+
+  DATA: lv_result   TYPE boolean,
+        lv_response TYPE string.
+
+  TRY.
+      CALL METHOD zmalo_cl_connector=>change_supplier
+        EXPORTING
+          iv_from      = p_s_from
+          iv_malo_id   = p_s_maid
+          iv_term_date = p_s_tdat
+          iv_cend_date = p_s_cdat
+        IMPORTING
+          ev_response  = lv_response
+          ev_result    = lv_result.
+    CATCH /idxgc/cx_general.
+      WRITE: 'Exception raised'.
+  ENDTRY.
+
+  IF lv_result IS NOT INITIAL.
+    WRITE: 'change_supplier(', p_s_maid, ') =', lv_result.
+  ELSE.
+    WRITE: 'change_supplier(', p_s_maid, ') =', lv_response.
+  ENDIF.
+
+ENDFORM.
+
+FORM initiate_contract_cancel.
+
+  DATA: lv_result   TYPE boolean,
+        lv_response TYPE string.
+
+  TRY.
+      CALL METHOD zmalo_cl_connector=>initiate_contract_cancel
+        EXPORTING
+          iv_from      = p_i_from
+          iv_malo_id   = p_i_maid
+        IMPORTING
+          ev_response  = lv_response
+          ev_result    = lv_result.
+    CATCH /idxgc/cx_general.
+      WRITE: 'Exception raised'.
+  ENDTRY.
+
+  IF lv_result IS NOT INITIAL.
+    WRITE: 'initiate_contract_cancel(', p_i_maid, ') =', lv_result.
+  ELSE.
+    WRITE: 'initiate_contract_cancel(', p_i_maid, ') =', lv_response.
+  ENDIF.
+
+ENDFORM.
